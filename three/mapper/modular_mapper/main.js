@@ -1,13 +1,17 @@
 import { debounce } from './utils';
 import map from './assets/map_1.png';
 
-import { DoubleSide, InstancedBufferAttribute, InstancedMesh, Object3D, PerspectiveCamera, PlaneBufferGeometry, Scene, ShaderMaterial, TextureLoader, WebGLRenderer } from 'three';
+import { DoubleSide, InstancedBufferAttribute, InstancedMesh, Object3D, OrthographicCamera, PerspectiveCamera, PlaneBufferGeometry, Scene, ShaderMaterial, TextureLoader, WebGLRenderer } from 'three';
 import BackgroundCanvas from './background-canvas';
 
 class Sketch {
   constructor() {
+    this.pixelGrid = 80;
+    this.gridSize = 1;
+    this.cellSize = this.gridSize / this.pixelGrid;
+
     this.shouldRender = false;
-    this.backgroundCanvas = new BackgroundCanvas({ size: 80, aspect: 1.4 })
+    this.backgroundCanvas = new BackgroundCanvas({ size: this.pixelGrid })
     this.startTime = 0;
     this.tick = 0;
 
@@ -25,23 +29,55 @@ class Sketch {
   
   setup() {
     // Add window events
-    window.addEventListener('resize', debounce(() => this.resize(), 250));
+    // window.addEventListener('resize', debounce(() => this.resize(), 250));
 
     this.renderer = new WebGLRenderer();
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setClearColor('#000', 1);
-    document.body.appendChild(this.renderer.domElement);
+    // this.renderer.setSize(window.innerWidth, window.innerHeight);
 
-    this.camera = new PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 100);
-    this.camera.position.z = 1.4;
+    this.rendererSize = window.innerHeight;
+    this.renderer.setSize(this.rendererSize, this.rendererSize);
+    this.renderer.setClearColor('#f00', 1);
+    this.renderElement = this.renderer.domElement;
+    this.renderElement.id = 'render-canvas';
+    // this.renderElement.style.marginLeft = '100px';
+    this.renderElement.style.position = 'fixed';
+    document.body.appendChild(this.renderElement);
+
+    // this.camera = new PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 100);
+    this.camera = new OrthographicCamera();
+    this.camera.position.z = 1;
     this.camera.lookAt(0, 0, 0);
 
     this.scene = new Scene();
   }
 
+  resize() {
+    this.width = window.innerWidth;
+    this.height = window.innerHeight;
+
+    // Resize background canvas
+    this.backgroundCanvas.resize(this.width, this.height);
+
+    const aspect = 1;
+    const zoom = 0.5;
+
+    this.camera.left = -zoom * aspect;
+    this.camera.right = zoom * aspect;
+    this.camera.top = zoom;
+    this.camera.bottom = -zoom;
+
+    this.camera.near = 1;
+    this.camera.far = 100;
+
+    this.camera.updateProjectionMatrix();
+  }
+
+  terminate() {
+    // Remove window events
+    window.removeEventListener('resize');
+  }
+
   addMesh() {
-    this.gridSize = 1;
-    this.cellSize = this.gridSize / 60;
 
     this.planeGeo = new PlaneBufferGeometry(this.cellSize, this.cellSize);
     this.planeMat = new ShaderMaterial({
@@ -81,17 +117,22 @@ class Sketch {
       },
       side: DoubleSide,
     });
-    this.plane = new InstancedMesh(this.planeGeo, this.planeMat, 80 * (80 * 1.4));
+    this.plane = new InstancedMesh(this.planeGeo, this.planeMat, this.pixelGrid**2);
 
     const dummy = new Object3D();
     let count = 0;
-    let scales = new Float32Array(80 * (80 * 1.4));
-    for (let i = 0; i < (80 * 1.4); i++) {
-      for (let j = 0; j < 80; j++) {
-        dummy.position.set(j * this.cellSize - 0.5, -i * this.cellSize + 0.5);
+    let scales = new Float32Array(this.pixelGrid**2);
+    let alpha = new Float32Array(this.pixelGrid**2);
+    for (let y = 0; y < this.pixelGrid; y++) {
+      for (let x = 0; x < this.pixelGrid; x++) {
+        const offset = (this.cellSize * this.pixelGrid / 2) - (this.cellSize / 2);
+
+        dummy.position.set(x * this.cellSize - offset, -y * this.cellSize + offset);
         dummy.updateMatrix();
         scales.set([Math.random()], count);
         this.plane.setMatrixAt(count++, dummy.matrix);
+
+        alpha.set([], count);
       }
     }
 
@@ -101,32 +142,18 @@ class Sketch {
     this.scene.add(this.plane);
   }
 
-  resize() {
-    this.width = window.innerWidth;
-    this.height = window.innerHeight;
-
-    // Resize background canvas
-    this.backgroundCanvas.resize(this.width, this.height);
-  }
-
-  terminate() {
-    // Remove window events
-    window.removeEventListener('resize');
-  }
-
   render() {
     if (!this.shouldRender) {
       requestAnimationFrame(this.render);
       return false;
     }
 
-    const time = this.startTime + performance.now() / 1000;
     this.tick++;
 
-    this.backgroundCanvas.update({ time, tick: this.tick });
+    this.backgroundCanvas.update(this.tick);
 
-    const scales = new Float32Array(80 * (80 * 1.4));
-    const imageData = this.backgroundCanvas.ctx.getImageData(0, 0, 80, 80 * 1.4);
+    const scales = new Float32Array(this.pixelGrid * (this.pixelGrid * 1.4));
+    const imageData = this.backgroundCanvas.ctx.getImageData(0, 0, this.pixelGrid, this.pixelGrid * 1.4);
 
     for (let i = 0; i < imageData.data.length; i += 4) {
       scales.set([imageData.data[i] / 255], i / 4);

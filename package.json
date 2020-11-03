@@ -18,7 +18,7 @@
     "pixi.js": "^5.3.3",
     "primitive-quad": "^2.0.0",
     "regl": "^2.0.1",
-    "three": "^0.121.1",
+    "three": "^0.122.0",
     "three-bmfont-text": "^3.0.1",
     "twgl.js": "^4.16.1",
     "two.js": "^0.7.0-stable.1"
