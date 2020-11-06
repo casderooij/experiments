@@ -1,7 +1,9 @@
 html {
   box-sizing: border-box;
 }
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: inherit;
 }
 
@@ -9,6 +11,9 @@ body {
   margin: 0;
   height: 100vh;
   background-color: black;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 canvas {
@@ -16,4 +21,6 @@ canvas {
 }
 #background-canvas {
   display: none;
+}
+#render-canvas {
 }

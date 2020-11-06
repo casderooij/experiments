@@ -12,7 +12,7 @@ class Particle {
     this.tickOffset = Math.floor(Math.random() * 200);
     this.change = Math.floor(Math.random() * 50);
     
-    this.radius = 0.4;
+    this.radius = 0.5;
     this.alpha = {
       value: 0
     };
@@ -54,7 +54,7 @@ class Particle {
         gsap.to(this.alpha, {
           duration: 2,
           ease: 'ease.in',
-          value: 0.2,
+          value: 0.3,
         });
       }
       if(this.lifetime === this.step) {
@@ -77,6 +77,23 @@ class Particle {
   }
 }
 
+class NewParticle {
+
+}
+
+class Word {
+  constructor() {
+  }
+
+  init(path) {
+    loadImage(path).then(img => this.img = img);
+  }
+
+  draw(ctx) {
+    ctx.drawImage(this.img, 0, 0, 100, 100);
+  }
+}
+
 class BackgroundCanvas {
   constructor(opts = {}) {
     this.size = opts.size;
@@ -95,7 +112,7 @@ class BackgroundCanvas {
     this.canvas.height = window.innerHeight;
     this.canvas.id = 'background-canvas';
     
-    this.ctx = this.canvas.getContext('2d');
+    this.ctx = this.canvas.getContext('2d', {alpha: false});
     
     const particlesCount = 14;
     this.particles = Array(particlesCount).fill().map(_ => new Particle(this.size));
@@ -109,6 +126,9 @@ class BackgroundCanvas {
       })
       this.imgArray = imgs
     });
+
+    this.word = new Word();
+    this.word.init(idoImg);
   }
 
   resize(width, height) {
@@ -120,16 +140,19 @@ class BackgroundCanvas {
   }
 
   update(tick) {
-    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.09)';
+    // this.ctx.fillStyle = 'rgba(0, 0, 0, 0.09)';
+    this.ctx.fillStyle = 'rgba(0,0,0,0.1)';
     this.ctx.fillRect(0, 0, this.width, this.height);
 
-    // this.imgArray.map((img, i) => {
-    //   this.ctx.save();
-    //   this.ctx.translate(Math.cos(tick * 0.01) * 2, Math.sin(tick * 0.01) + i * img.height * 0.05);
-    //   this.ctx.rotate(0.2);
-    //   this.ctx.drawImage(img, 10, 0, img.width * 0.05, img.height * 0.05);
-    //   this.ctx.restore();
-    // });
+    this.imgArray.map((img, i) => {
+      this.ctx.save();
+      this.ctx.translate(Math.cos(tick * 0.01) * 2, Math.sin(tick * 0.01) + i * img.height * 0.05);
+      this.ctx.rotate(0.2);
+      this.ctx.drawImage(img, 10, 0, img.width * 0.04, img.height * 0.04);
+      this.ctx.restore();
+    });
+
+    // this.word.draw(this.ctx);
 
     this.particles.map(p => {
       p.draw(this.ctx);

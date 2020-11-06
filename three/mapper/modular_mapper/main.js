@@ -34,7 +34,7 @@ class Sketch {
     this.renderer = new WebGLRenderer();
     // this.renderer.setSize(window.innerWidth, window.innerHeight);
 
-    this.rendererSize = window.innerHeight;
+    this.rendererSize = window.innerHeight * 0.8;
     this.renderer.setSize(this.rendererSize, this.rendererSize);
     this.renderer.setClearColor('#f00', 1);
     this.renderElement = this.renderer.domElement;
@@ -86,25 +86,29 @@ class Sketch {
       },
       vertexShader: `
         attribute float aInstanceScale;
+        attribute float aScaleAlpha;
 
         varying vec2 vUv;
         varying float vScale;
+        varying float vScaleAlpha;
 
         void main() {
           vUv = uv;
           vScale = aInstanceScale;
+          vScaleAlpha = aScaleAlpha;
           gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.);
         }
       `,
       fragmentShader: `
         varying vec2 vUv;
         varying float vScale;
+        varying float vScaleAlpha;
         uniform sampler2D t1;
 
         void main() {
           float size = 32.;
           vec2 newUV = vUv;
-          newUV.x = vUv.x / size + floor(vScale * size) / size;
+          newUV.x = vUv.x / size + floor((vScale - vScaleAlpha) * size) / size;
           vec4 texture = texture2D(t1, newUV);
           gl_FragColor = texture;
         }
@@ -117,7 +121,7 @@ class Sketch {
       },
       side: DoubleSide,
     });
-    this.plane = new InstancedMesh(this.planeGeo, this.planeMat, this.pixelGrid**2);
+    this.plane = new InstancedMesh(this.planeGeo, this.planeMat, this.pixelGrid ** 2);
 
     const dummy = new Object3D();
     let count = 0;
@@ -127,16 +131,20 @@ class Sketch {
       for (let x = 0; x < this.pixelGrid; x++) {
         const offset = (this.cellSize * this.pixelGrid / 2) - (this.cellSize / 2);
 
+        const xa = Math.ceil(((x / this.pixelGrid - 0.5) * 2) * 100) / 100;
+        const ya = Math.ceil(((y / this.pixelGrid - 0.5) * 2) * 100) / 100;
+        let b = Math.ceil(((xa ** 10) + (ya ** 20)) * 100) / 100;
+        alpha.set([b], count);
+
         dummy.position.set(x * this.cellSize - offset, -y * this.cellSize + offset);
         dummy.updateMatrix();
         scales.set([Math.random()], count);
         this.plane.setMatrixAt(count++, dummy.matrix);
-
-        alpha.set([], count);
       }
     }
 
     this.plane.geometry.setAttribute('aInstanceScale', new InstancedBufferAttribute(scales, 1));
+    this.plane.geometry.setAttribute('aScaleAlpha', new InstancedBufferAttribute(alpha, 1));
     this.plane.instanceMatrix.needsUpdate = true;
 
     this.scene.add(this.plane);
